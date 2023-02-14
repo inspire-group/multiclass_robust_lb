@@ -213,32 +213,8 @@ def main():
     if not os.path.exists(density_plots_dir):
         os.makedirs(density_plots_dir)
 
-
-    #if args.use_full:
-    #    subsample_sizes = [num_samples]
-    #else:
-    #    subsample_sizes = []
-    #    th = [200,800,3200]
-    #    for t in th:
-    #        subsample_size_t = []
-    #        for i in range(args.n_classes):
-    #            subsample_size_t.append(min(t, num_samples[i]))
-    #        subsample_sizes.append(subsample_size_t)
-    #    subsample_sizes.append(num_samples)
-                
-    #rng = np.random.default_rng(77)
-    #for subsample_size in subsample_sizes:
-    #    if subsample_size == num_samples:
-    #        args.num_reps=1
         
     for rep in range(args.num_reps):
-        #if args.use_full:
-        #X_cs_curr = X_cs
-        #else:
-        #    X_cs_curr = []
-        #    for i, X_c in enumerate(X_cs):
-        #        indices = rng.integers(num_samples[i],size=subsample_size[i])
-        #        X_cs_curr.append(X_c[indices])
 
         # extract edges and their dists from data
         t1 = time.process_time()

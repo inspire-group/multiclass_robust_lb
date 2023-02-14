@@ -71,11 +71,6 @@ class MNIST(VisionDataset):
         self.np_array = np_array
         self.total_classes = 10
 
-        if training_time:
-            self.marking_strat = args.marking_strat
-        else:
-            self.marking_strat = args.new_marking_strat
-
         if download:
             self.download()
 
@@ -89,48 +84,7 @@ class MNIST(VisionDataset):
             data_file = self.test_file
         
         self.data, self.targets = torch.load(os.path.join(self.processed_folder, data_file))
-
-        #self.data, self.targets, num_samples = self._two_c_filter(args)
         self.data, self.targets, self.num_samples_per_class = self._multi_c_filter(args)
-
-        #self.dropping = dropping
-
-        #if args.n_classes is not None:
-        #    self.easy_idx = np.ones(args.n_classes*num_samples,dtype=bool)
-        #    self.matched_idx = -1*np.ones(args.n_classes*num_samples)
-        #else:
-        #    self.easy_idx = np.ones(self.total_classes*num_samples,dtype=bool)
-        #    self.matched_idx = -1*np.ones(self.total_classes*num_samples)
-
-        # Tracking paired points
-        #if self.marking_strat is not None:
-            # print('Using %s to mark' % self.marking_strat)
-        #    if self.marking_strat == 'matched':
-        #        mask_matched = self._matching_filter(args, num_samples)
-        #    elif self.marking_strat == 'approx':
-        #        print('Using approx filtering')
-        #        mask_matched = self._degree_filter(args, num_samples)
-        #    elif self.marking_strat == 'random':
-        #        print('Dropping random points')
-        #        mask_matched = self._random_filter(args, num_samples)
-        #    elif self.marking_strat == 'distance':
-        #        # Only used at test time
-        #        mask_matched = self._distance_filter(args, num_samples)
-        #    elif 'matched_future' in self.marking_strat:
-        #        mask_matched = self._matching_future_filter(args, num_samples)
-        # print('No. of samples in use: {}'.format(len(self.data)))
-        # Checking if points need to be dropped  
-        #if self.dropping and self.training_time:
-        #    if self.marking_strat == 'distance':
-        #        raise ValueError('Distance-based marking cannot be used at train time')
-        #    print('Filtering training data')
-        #    curr_data = self.data[mask_matched]
-        #    curr_labels = np.array(self.targets)
-        #    curr_labels = curr_labels[mask_matched]
-        #    self.easy_idx = self.easy_idx[mask_matched]
-        #    print('Length of data after dropping:{}'.format(len(curr_data)))    
-        #    self.data = curr_data
-        #    self.targets = curr_labels
 
 
     
@@ -191,142 +145,6 @@ class MNIST(VisionDataset):
         curr_labels = Y_curr.tolist()
         curr_labels = [int(x) for x in curr_labels]
         return curr_data, curr_labels, num_samples_per_class
-
-
-    def _matching_filter(self, args, num_samples):
-        class_1 = args.class_1
-        class_2 = args.class_2
-        mask_matched = np.ones(2*num_samples,dtype=bool)
-        # print(matching_file_name(args,class_1,class_2, self.train, num_samples))
-        if os.path.exists(matching_file_name(args,class_1,class_2, self.train, num_samples)):
-            output = np.load(matching_file_name(args, class_1, class_2, self.train, num_samples))
-        else:
-            raise ValueError('No matching computed')
-        num_matched = len(output[0])
-        if num_matched == 0:
-            print('No matching')
-            # return self.data, self.targets
-        else:
-            # Dropping at random
-            for i in range(num_matched):
-                coin = np.random.random_sample()
-                if coin < 0.5:
-                    mask_matched[output[0][i]] = False
-                else:
-                    mask_matched[num_samples+output[1][i]] = False
-                # Marking hard samples
-                self.easy_idx[output[0][i]] = False
-                self.easy_idx[num_samples+output[1][i]] = False
-                self.matched_idx[output[0][i]] = num_samples+output[1][i]
-                self.matched_idx[num_samples+output[1][i]] = output[0][i]
-
-            return mask_matched
-
-    def _matching_future_filter(self, args, num_samples):
-        class_1 = args.class_1
-        class_2 = args.class_2
-        mask_matched = np.ones(2*num_samples,dtype=bool)
-        # print(global_matching_file_name(args,class_1,class_2, self.train, num_samples))
-        match_dict_name, match_tuple_name = global_matching_file_name(args,class_1,class_2, self.train, num_samples)
-        if os.path.exists(match_tuple_name):
-            output = np.load(match_tuple_name)
-            with open(match_dict_name, 'r') as f:
-                output_dict = json.load(f)
-        else:
-            raise ValueError('No future matching computed')
-        if 'replace' in self.marking_strat:
-            if os.path.exists(matching_file_name(args,class_1,class_2, self.train, num_samples)):
-                output_local = np.load(matching_file_name(args, class_1, class_2, self.train, num_samples))
-            else:
-                raise ValueError('No matching computed')
-        num_matched = len(output_dict)
-        # print('Marking %s using future matching' % num_matched)
-        if num_matched == 0:
-            print('No matching')
-            # return self.data, self.targets
-        else:
-            # Dropping at random
-            for k in output_dict:
-                self.easy_idx[int(k)] = False
-                self.matched_idx[int(k)] = int(output_dict[k][0])
-                if 'replace' in self.marking_strat:
-                    if int(k) < num_samples:
-                        if int(k) in output_local[0]:
-                            i = list(output_local[0]).index(int(k))
-                            self.matched_idx[int(k)] = num_samples+output_local[1][i]
-                            # print('%s to %s replaced at curr eps' % (int(k), num_samples+output_local[1][i]))
-                    elif int(k) >= num_samples:
-                        mod_k = int(k) - num_samples
-                        if mod_k in output_local[1]:
-                            i = list(output_local[1]).index(mod_k)
-                            self.matched_idx[int(k)] = output_local[0][i]
-                            # print('%s to %s replaced at curr eps' % (int(k), output_local[0][i]))
-
-            return mask_matched
-
-    def _degree_filter(self, args, num_samples):
-        class_1 = args.class_1
-        class_2 = args.class_2
-        mask_matched = np.ones(2*num_samples,dtype=bool)
-        if os.path.exists(degree_file_name(args,class_1,class_2, self.train, num_samples)):
-            with open(degree_file_name(args,class_1,class_2, self.train, num_samples)) as json_file:
-                degree_data = json.load(json_file)
-        else:
-            raise ValueError('No degree details computed')
-        first_key = next(iter(degree_data))
-        if degree_data[first_key] == num_samples:
-            print('Only cost 1 edges present')
-            # return self.data, self.targets
-            return mask_matched
-        else:
-            # Dropping highest degree vertices from sorted dict
-            count = 0
-            first_time = 2*args.num_samples
-            for k,v in degree_data.items():
-                if v == num_samples and first_time>count:
-                    first_time = count
-                if count >= args.drop_thresh:
-                    break
-                else:
-                    mask_matched[int(k)] = False
-                    self.easy_idx[int(k)] = False
-                count += 1
-            print(len(np.where(mask_matched==False)[0]))
-            print(first_time)
-            return mask_matched
-
-    def _random_filter(self, args, num_samples):
-        mask_matched = np.ones(2*num_samples,dtype=bool)
-        drop_indices = np.random.choice(2*num_samples, args.drop_thresh, replace=False)
-        mask_matched[drop_indices] = 0
-        return mask_matched
-    
-    def _distance_filter(self, args, num_samples):
-        class_1 = args.class_1
-        class_2 = args.class_2
-        # All points are matched to the closest point
-        mask_matched = np.ones(2*num_samples,dtype=bool)
-        # print(matching_file_name(args,class_1,class_2, self.train, num_samples))
-        if os.path.exists(distance_file_name(args,class_1,class_2, self.train, num_samples)):
-            dist_mat = np.load(distance_file_name(args, class_1, class_2, self.train, num_samples))
-        else:
-            raise ValueError('Distances not computed')
-        # Pairing based on distance
-        for i in range(2*num_samples):
-            if i<num_samples:
-                row_idx = i
-                curr_dists = dist_mat[row_idx,:]
-                closest_idx = np.argmin(curr_dists)
-                self.matched_idx[i] = num_samples+closest_idx
-                self.easy_idx[i] = False
-            else:
-                col_idx = i % num_samples
-                curr_dists = dist_mat[:,col_idx]
-                closest_idx = np.argmin(curr_dists)
-                self.matched_idx[i] = closest_idx
-                self.easy_idx[i] = False
-
-        return mask_matched
 
     def __getitem__(self, index):
         """
