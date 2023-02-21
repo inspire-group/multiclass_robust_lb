@@ -127,7 +127,7 @@ def get_edge_pairs(args, dist_dir, dataloader, subsample_size):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset_in", default='MNIST', choices=['MNIST', 'CIFAR-10', 'CIFAR-100', 'CelebA'],
+    parser.add_argument("--dataset_in", default='MNIST', choices=['MNIST', 'CIFAR-10', 'CIFAR-100'],
                         help="dataset to be used")
     parser.add_argument("--balanced", action='store_true', help='whether to enforced balanced num samples across each class')
     parser.add_argument("--norm", default='l2',

@@ -2,7 +2,7 @@
 
 ## Compute optimal loss of existing datasets
 
-The main document to compute optimal loss of a dataset is **`optimal_log_loss_lp_hyper.py`**. It is able to compute loss on dataset `MNIST`, `CIFAR-10`, `CIFAR-100` and `CelebA` (using `--dataset_in` argument) and `0-1` or cross-entropy loss (using `--loss` argument). We can compute up to 4-way hyperedges. Users can also select specific classes of a dataset for computation (using `--classes` argument). More arguments and flags can be found under `main()`.
+The main document to compute optimal loss of a dataset is **`optimal_log_loss_lp_hyper.py`**. It is able to compute loss on dataset `MNIST`, `CIFAR-10`, `CIFAR-100` (using `--dataset_in` argument) and `0-1` or cross-entropy loss (using `--loss` argument). We can compute up to 4-way hyperedges. Users can also select specific classes of a dataset for computation (using `--classes` argument). More arguments and flags can be found under `main()`.
 
 ### Compute full dataset
 
